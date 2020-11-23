@@ -128,7 +128,7 @@ class Status:
             math.sin(dlat / 2) ** 2
             + math.cos(radLatA) * math.cos(radLatB) * math.sin(dlon / 2) ** 2
         )
-        c = 2 * math.asin(math.sqrt(a))
+        c = 2 * math.asin(math.sqrt(abs(a)))
         return c * r * 1000
 
     def hasPassedWayPoint(self):

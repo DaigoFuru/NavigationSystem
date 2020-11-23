@@ -20,6 +20,9 @@ class Logger:
             "T_LONGITUDE",
             "T_DIRECTION",
             "ERR_BACK",
+            "CURRENT", 
+            "VOLTAGE",
+            "POWER"
         ]
         self.writer.writerow(log_list)
 

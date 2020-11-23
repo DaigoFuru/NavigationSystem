@@ -15,7 +15,11 @@ I 0.0
 D 0.0
 
 --- WAY POINTS ---
-Waypoint_radius 90 [m]
-Waypoint_NUM 1
+Waypoint_radius 40 [m]
+Waypoint_NUM 4
 latitude longitude
-35.710887 139.761674
+35.9005720 139.9330656
+35.9013557 139.9345909
+35.9005926 139.9350440
+35.9001810 139.9338615
+

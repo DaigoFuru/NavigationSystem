@@ -15,9 +15,24 @@ from Logger import Logger
 from PwmOut import PwmOut
 from PwmRead import PwmRead
 from Pid import PositionalPID
+from ina226 import ina226
 
 import time
 import sys
+
+INA226_ADDRESS = 0x40
+
+ina226_averages_t = dict(
+    INA226_AVERAGES_1=0b000,
+    INA226_AVERAGES_4=0b001,
+    INA226_AVERAGES_16=0b010,
+    INA226_AVERAGES_64=0b011,
+    INA226_AVERAGES_128=0b100,
+    INA226_AVERAGES_256=0b101,
+    INA226_AVERAGES_512=0b110,
+    INA226_AVERAGES_1024=0b111,
+)
+
 
 
 class Driver:
@@ -38,6 +53,23 @@ class Driver:
         self.logger.open()
         # Whether experienced OR mode or not
         self.or_experienced = False
+
+        # setup for ina226
+        print("Configuring INA226..")
+        self.iSensor = ina226(INA226_ADDRESS, 1)
+        self.iSensor.configure(avg=ina226_averages_t["INA226_AVERAGES_4"],)
+        self.iSensor.calibrate(rShuntValue=0.002, iMaxExcepted=1)
+
+        time.sleep(1)
+
+        print("Configuration Done")
+
+        current = self.iSensor.readShuntCurrent()
+
+        print("Current Value is " + str(current) + "A")
+
+        print("Mode is " + str(hex(self.iSensor.getMode())))
+
 
     def load(self, filename):
         print("loading", filename)
@@ -93,6 +125,20 @@ class Driver:
 
             # for test
             self.pwm_read.printPulseWidth()
+            # ina226
+            print(
+                "Current: "
+                + str(round(self.iSensor.readShuntCurrent(), 3))
+                + "A"
+                + ", Voltage: "
+                + str(round(self.iSensor.readBusVoltage(), 3))
+                + "V"
+                + ", Power:"
+                + str(round(self.iSensor.readBusPower(), 3))
+                + "W"
+            )
+
+
 
             mode = self.getMode()
             if mode == "RC":
@@ -162,7 +208,7 @@ class Driver:
             target_direction = self.status.target_direction
             servo_pulsewidth = self.pid.getStepSignal(target_direction, boat_direction)
             self.pwm_out.servo_pulsewidth = servo_pulsewidth
-            self.pwm_out.thruster_pulsewidth = 1880
+            self.pwm_out.thruster_pulsewidth = 1200
             return
         else:
             # If the boat has passed the last waypoint,
@@ -196,6 +242,9 @@ class Driver:
         t_latitude = target[0]
         t_longitude = target[1]
         err = self.pid.ErrBack
+        current = str(round(self.iSensor.readShuntCurrent(), 3))
+        voltage = str(round(self.iSensor.readBusVoltage(), 3))
+        power = str(round(self.iSensor.readBusPower(), 3))
 
         # To print logdata
         print(timestamp_string)
@@ -228,6 +277,9 @@ class Driver:
             t_longitude,
             t_direction,
             err,
+            current,
+            voltage,
+            power,
         ]
         self.logger.write(log_list)
         return
