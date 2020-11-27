@@ -1,10 +1,10 @@
 # NavigationSystem
 
-This is the algorism that the solar boart can aim the goal automatically
+This is an algorithm by which the solar boat can aim the goal automatically
  
 # Overview
  
-システムの概要
+todo: システムの概要
  
 # Requirement
  
@@ -59,18 +59,19 @@ if which pyenv > /dev/null; then eval "$(pyenv init -)"; fi' >`
 
  
 # Usage
- 
-```bash
 
+```bash
+python3 main.py parameter_sample.txt
 ```
  
 # Note
  
-注意点などがあれば書く
+todo: 注意点などがあれば書く
  
 # Author
  
  
-* YukiSaegusa
+* YukiSaegusa, Amusac
 * University of Tokyo
  
+ [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)

@@ -13,9 +13,9 @@ from Driver import Driver
 
 
 def main():
+    # Initilize
+    driver = Driver()
     try:
-        # Initilize
-        driver = Driver()
         # Command line arguments
         args = sys.argv
         if len(args) < 2:

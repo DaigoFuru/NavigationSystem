@@ -15,9 +15,23 @@ from Logger import Logger
 from PwmOut import PwmOut
 from PwmRead import PwmRead
 from Pid import PositionalPID
+from ina226 import ina226
 
 import time
 import sys
+
+INA226_ADDRESS = 0x40
+
+ina226_averages_t = dict(
+    INA226_AVERAGES_1=0b000,
+    INA226_AVERAGES_4=0b001,
+    INA226_AVERAGES_16=0b010,
+    INA226_AVERAGES_64=0b011,
+    INA226_AVERAGES_128=0b100,
+    INA226_AVERAGES_256=0b101,
+    INA226_AVERAGES_512=0b110,
+    INA226_AVERAGES_1024=0b111,
+)
 
 
 class Driver:
@@ -39,6 +53,24 @@ class Driver:
         # Whether experienced OR mode or not
         self.or_experienced = False
 
+        # setup for ina226
+        print("Configuring INA226..")
+        self.iSensor = ina226(INA226_ADDRESS, 1)
+        self.iSensor.configure(
+            avg=ina226_averages_t["INA226_AVERAGES_4"],
+        )
+        self.iSensor.calibrate(rShuntValue=0.002, iMaxExcepted=1)
+
+        time.sleep(1)
+
+        print("Configuration Done")
+
+        current = self.iSensor.readShuntCurrent()
+
+        print("Current Value is " + str(current) + "A")
+
+        print("Mode is " + str(hex(self.iSensor.getMode())))
+
     def load(self, filename):
         print("loading", filename)
         f = open(filename, "r")
@@ -52,18 +84,6 @@ class Driver:
         line = f.readline()
         line = f.readline()
         line = f.readline()
-        self.pwm_read.num_cycles = int(line.split()[1])  # NUM_CYCLE
-
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        self.pwm_out.coefficient = float(line.split()[1])  # Coefficient
-
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        self.pid.angular_range = int(line.split()[1])  # angular_range
-        line = f.readline()
         p = float(line.split()[1])  # P
         line = f.readline()
         i = float(line.split()[1])  # I
@@ -73,8 +93,6 @@ class Driver:
 
         line = f.readline()
         line = f.readline()
-        line = f.readline()
-        self.status.waypoint_radius = float(line.split()[1])  # range of target point
         line = f.readline()
         num = int(line.split()[1])  # Number of waypoints
         line = f.readline()
@@ -93,6 +111,18 @@ class Driver:
 
             # for test
             self.pwm_read.printPulseWidth()
+            # ina226
+            print(
+                "Current: "
+                + str(round(self.iSensor.readShuntCurrent(), 3))
+                + "A"
+                + ", Voltage: "
+                + str(round(self.iSensor.readBusVoltage(), 3))
+                + "V"
+                + ", Power:"
+                + str(round(self.iSensor.readBusPower(), 3))
+                + "W"
+            )
 
             mode = self.getMode()
             if mode == "RC":
@@ -114,7 +144,7 @@ class Driver:
         mode_duty_ratio = self.pwm_read.pulse_width[0]
         or_pulse = self.pwm_read.pulse_width[3]
         # OR mode
-        if or_pulse == 1100 or (1500 <= mode_duty_ratio and self.or_experienced):
+        if or_pulse < 1300 or (1500 <= mode_duty_ratio and self.or_experienced):
             if not self.or_experienced:
                 self.status.updateWayPoint()
             self.status.mode = "OR"
@@ -157,17 +187,12 @@ class Driver:
 
     def autoNavigation(self):
         self.updateStatus()
-        if self.status.mode != "AN_END":
-            boat_direction = self.status.boat_direction
-            target_direction = self.status.target_direction
-            servo_pulsewidth = self.pid.getStepSignal(target_direction, boat_direction)
-            self.pwm_out.servo_pulsewidth = servo_pulsewidth
-            self.pwm_out.thruster_pulsewidth = 1880
-            return
-        else:
-            # If the boat has passed the last waypoint,
-            # the navigation system get RC mode.
-            return
+        boat_direction = self.status.boat_direction
+        target_direction = self.status.target_direction
+        servo_pulsewidth = self.pid.getStepSignal(target_direction, boat_direction)
+        self.pwm_out.servo_pulsewidth = servo_pulsewidth
+        self.pwm_out.thruster_pulsewidth = 1250
+        return
 
     def remoteControl(self):
         # Do nothing
@@ -189,13 +214,15 @@ class Driver:
         direction = self.status.boat_direction
         servo_pw = self.pwm_out.servo_pulsewidth
         thruster_pw = self.pwm_out.thruster_pulsewidth
-        t_index = self.status.waypoint.getIndex()
         t_direction = self.status.target_direction
         t_distance = self.status.target_distance
         target = self.status.waypoint.getPoint()
         t_latitude = target[0]
         t_longitude = target[1]
         err = self.pid.ErrBack
+        current = str(round(self.iSensor.readShuntCurrent(), 3))
+        voltage = str(round(self.iSensor.readBusVoltage(), 3))
+        power = str(round(self.iSensor.readBusPower(), 3))
 
         # To print logdata
         print(timestamp_string)
@@ -207,7 +234,6 @@ class Driver:
             "DUTY (SERVO, THRUSTER):       (%6.1f, %6.1f) [us]"
             % (servo_pw, thruster_pw)
         )
-        print("TARGET No.%2d" % (t_index))
         print("TARGET (LATITUDE, LONGITUDE): (%.7f, %.7f)" % (t_latitude, t_longitude))
         print(
             "TARGET (DIRECTION, DISTANCE): (%5.2f, %5.2f [m])"
@@ -223,11 +249,16 @@ class Driver:
             longitude,
             direction,
             speed,
-            t_index,
             t_latitude,
             t_longitude,
+            servo_pw,
+            thruster_pw,
             t_direction,
+            t_distance,
             err,
+            current,
+            voltage,
+            power,
         ]
         self.logger.write(log_list)
         return

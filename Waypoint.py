@@ -10,7 +10,11 @@
 
 
 class Waypoint:
-    def __init__(self, latitude=[], longitude=[]):
+    def __init__(self, latitude=None, longitude=None):
+        if longitude is None:
+            longitude = []
+        if latitude is None:
+            latitude = []
         self.latitude = latitude
         self.longitude = longitude
         self.__index = 0
@@ -27,18 +31,12 @@ class Waypoint:
         longitude = self.longitude[self.__index]
         return [latitude, longitude]
 
-    def getIndex(self):
-        return self.__index + 1
-
     def nextPoint(self):
-        # If the boat has passed the final point,
-        # this function returns False
-        # If not, this function returns True
-        if self.__index < self.__num:
-            self.__index = self.__index + 1
-            return True
-        else:
+        self.__index += 1
+        if self.__index == self.__num:
             return False
+        else:
+            return True
 
 
 if __name__ == "__main__":

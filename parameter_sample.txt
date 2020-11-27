@@ -1,21 +1,14 @@
 --- TIME ---
 Time_Limit 12600 [second]
-Sleep_time 0.1 [second]
-
---- PWM READ ---
-NUM_CYCLE 15
-
---- PWM OUT ---
-coefficient 1.0
+Sleep_time 0.2 [second]
 
 --- PID CONTROL ---
-angular_range 150 [degree]
-P 0.02
+P 0.1
 I 0.0
 D 0.0
 
 --- WAY POINTS ---
-Waypoint_radius 90 [m]
-Waypoint_NUM 1
+NUM 2
 latitude longitude
-35.710887 139.761674
+35.9510042 139.9841261
+35.9013557 139.9345909

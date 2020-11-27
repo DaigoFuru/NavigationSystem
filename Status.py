@@ -27,22 +27,15 @@ class Status:
         self.timestamp_string = ""
         self.target_direction = 0.0
         self.target_distance = 0.0
-        self.waypoint_radius = 0.0
         self.gps_data = GpsData()
         self.gps_data_for_out_of_range = None
 
     def readGps(self):
         if self.gps_data.read():
-            # If the boat doesn't move in 0.5 [m], don't update the direciton
-            if (
-                self.getDistance(
-                    self.longitude,
-                    self.latitude,
-                    self.gps_data.longitude,
-                    self.gps_data.latitude,
-                )
-                > 0.5
-            ):
+            diff = abs(self.longitude - self.gps_data.longitude) + abs(
+                self.latitude - self.gps_data.latitude
+            )
+            if diff >= 0.000001:
                 self.boat_direction = self.getDirection(
                     self.longitude,
                     self.latitude,
@@ -64,7 +57,7 @@ class Status:
 
     # Not Use
     def isGpsError(self):
-        if self.latitude < 0.000001 and self.longitude < 0.000001:
+        if self.latitude < 0.00001 and self.longitude < 0.00001:
             return True
         else:
             return False
@@ -116,23 +109,8 @@ class Status:
         dir = (dir + 360) % 360
         return dir
 
-    def getDistance(self, LonA, LatA, LonB, LatB):
-        r = 6378.137  # [km] # radius of the Earth
-        radLonA = math.radians(LonA)
-        radLatA = math.radians(LatA)
-        radLonB = math.radians(LonB)
-        radLatB = math.radians(LatB)
-        dlon = radLonB - radLonA
-        dlat = radLatB - radLonA
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(radLatA) * math.cos(radLatB) * math.sin(dlon / 2) ** 2
-        )
-        c = 2 * math.asin(math.sqrt(a))
-        return c * r * 1000
-
     def hasPassedWayPoint(self):
-        if self.target_distance < self.waypoint_radius:
+        if self.target_distance < 90.0:
             return True
         else:
             return False
@@ -144,7 +122,7 @@ class Status:
             key = self.waypoint.nextPoint()
             if not key:
                 print("AN has finished!")
-                self.mode = "AN_END"
+                self.mode = "RC"
         return
 
     def updateWayPoint(self):

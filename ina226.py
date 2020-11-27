@@ -383,4 +383,5 @@ def demo():
         iSensor.close()
 
 
-demo()
+if __name__ == "__main__":
+    demo()

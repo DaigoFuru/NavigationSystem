@@ -19,7 +19,6 @@ class PositionalPID:
         self.PidOutput = 0.0
         self.PIDErrADD = 0.0
         self.ErrBack = 0.0
-        self.angular_range = 150.0
 
     def setPID(self, P, I, D):
         self.Kp = P
@@ -39,12 +38,9 @@ class PositionalPID:
         self.PidOutput = KpWork + KiWork + KdWork
         self.temp = math.exp(-self.PidOutput)
 
-        if self.PidOutput > 0:
-            self.PidOutput = 1 / (1 + self.temp) - 0.5
-        if self.PidOutput < 0:
-            self.PidOutput = (1 / (1 + self.temp)) - 0.5
+        self.PidOutput = (1 / (1 + self.temp)) - 0.5
 
-        self.direction = self.PidOutput * self.angular_range
+        self.direction = self.PidOutput * 150
 
         duty = 1000 / 180 * (self.direction + 90) + 1000
 
