@@ -10,6 +10,7 @@
 
 import RPi.GPIO as GPIO
 import time
+from queue import Queue
 
 
 class PwmRead:
@@ -18,10 +19,14 @@ class PwmRead:
         self.pin_thruster = pin_thruster
         self.pin_mode = pin_mode
         self.pulse_width = [0.0, 0.0, 0.0, 1500.0]  # [us] # mode, servo, thruster, OR
-        self.num_cycles = 15
+        self.num_cycles = 7
         self.pin_OR = pin_OR
-        # count for out of range
-        self.or_count = 0
+        # variables for out of range
+        self._or_queue = Queue()
+        self._or_queue_size = 20
+        for _ in range(self._or_queue_size):
+            self._or_queue.put(1500)
+        self._or_mean = 1500
 
         # setup for GPIO
         GPIO.setmode(GPIO.BCM)
@@ -89,7 +94,7 @@ class PwmRead:
         if self.num_cycles != num_error:
             ave = sum / (self.num_cycles - num_error)
             if (ave > 1000) and (ave < 2000):
-                self.pulse_width[1] = ave
+                self.pulse_width[1] = ave -350
 
         # thruster
         sum = 0.0
@@ -122,17 +127,16 @@ class PwmRead:
         GPIO.wait_for_edge(self.pin_OR, GPIO.RISING)
         start = time.time()
         GPIO.wait_for_edge(self.pin_OR, GPIO.FALLING)
-        pulse = (time.time() - start) * 1000 * 1000
+        latest_or_pulse = (time.time() - start) * 1000 * 1000
 
-        if pulse < 1300:
-            self.or_count += 1
-        else:
-            self.or_count = 0
+        # update queue
+        oldest_or_pulse = self._or_queue.get()
+        self._or_queue.put(latest_or_pulse)
 
-        if self.or_count > 10:
-            self.pulse_width[3] = 1100.0
-        else:
-            self.pulse_width[3] = 1500.0
+        # update mean value
+        self._or_mean += (latest_or_pulse - oldest_or_pulse) / self._or_queue_size
+
+        self.pulse_width[3] = self._or_mean
 
         return
 
